@@ -16,12 +16,24 @@ val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore("s
 class Settings(private val store: DataStore<Preferences>) {
     private val enabledKey = booleanPreferencesKey("enabled")
     private val presetKey = stringPreferencesKey("preset")
+    private val onboardingKey = booleanPreferencesKey("onboarding_done")
+    private val methodKey = stringPreferencesKey("method")
     private val offsetsKey = stringPreferencesKey("offsets")
 
     val enabled: Flow<Boolean> = store.data.map { it[enabledKey] ?: true }
     val preset: Flow<Preset> = store.data.map { p ->
         Preset.values().firstOrNull { it.name == p[presetKey] } ?: Preset.FLAT
     }
+
+    val method: Flow<EqMethod> = store.data.map { p ->
+        EqMethod.values().firstOrNull { it.name == p[methodKey] } ?: EqMethod.GLOBAL
+    }
+
+    val onboardingDone: Flow<Boolean> = store.data.map { it[onboardingKey] ?: false }
+
+    suspend fun setOnboardingDone(done: Boolean) { store.edit { it[onboardingKey] = done } }
+
+    suspend fun setMethod(m: EqMethod) { store.edit { it[methodKey] = m.name } }
 
     suspend fun setEnabled(on: Boolean) { store.edit { it[enabledKey] = on } }
     val offsets: Flow<List<Float>> = store.data.map { p ->

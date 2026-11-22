@@ -13,7 +13,10 @@ import com.equalizer.app.core.presetCurve
 import com.equalizer.app.core.recommendedFor
 import com.equalizer.app.device.ActiveOutput
 import com.equalizer.app.device.DeviceRegistry
+import com.equalizer.app.engine.EngineStatus
+import com.equalizer.app.engine.EqMethod
 import com.equalizer.app.engine.Settings
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -32,6 +35,15 @@ data class MainUiState(
     val failedCount: Int,
     val customPresets: List<CustomPreset> = emptyList(),
     val dumpAvailable: Boolean = true,
+    /** Método elegido por el usuario. */
+    val method: EqMethod = EqMethod.GLOBAL,
+    /** Método que realmente se usa (puede diferir si el global falló). */
+    val activeMethod: EqMethod = EqMethod.GLOBAL,
+    /** El método global falló y la app pasó sola al modo por app. */
+    val fellBack: Boolean = false,
+    /** Hay una app sonando sin sesión propia (p. ej. un navegador). */
+    val sessionlessApp: Boolean = false,
+    val nowPlaying: List<NowPlayingItem> = emptyList(),
 )
 
 class MainViewModel(
@@ -43,6 +55,8 @@ class MainViewModel(
     private val registry: DeviceRegistry,
     private val settings: Settings,
     private val custom: CustomPresets,
+    engineStatus: StateFlow<EngineStatus> = MutableStateFlow(EngineStatus(EqMethod.GLOBAL, false)),
+    nowPlaying: StateFlow<List<NowPlayingItem>> = MutableStateFlow(emptyList()),
     private val refreshOutput: () -> Unit,
 ) {
     val uiState: StateFlow<MainUiState> = combine(
@@ -56,14 +70,22 @@ class MainViewModel(
             bands = effective(out.deviceType, preset, offsets).bands,
             apps = sess.values.distinct(),
             failedCount = 0,
+            sessionlessApp = sess.containsKey(0),
         )
     }.combine(failed) { s, f -> s.copy(failedCount = f.size) }
         .combine(custom.all) { s, c -> s.copy(customPresets = c) }
         .combine(dumpAvailable) { s, d -> s.copy(dumpAvailable = d) }
+        .combine(settings.method) { s, m -> s.copy(method = m) }
+        .combine(nowPlaying) { s, n -> s.copy(nowPlaying = n) }
+        .combine(engineStatus) { s, e -> s.copy(activeMethod = e.active, fellBack = e.fellBack) }
         .stateIn(
             scope, SharingStarted.Eagerly,
             MainUiState(output.value, true, Preset.FLAT, recommendedFor(output.value.deviceType), List(10) { 0f }, emptyList(), 0),
         )
+
+    fun onSelectMethod(m: EqMethod) {
+        scope.launch { settings.setMethod(m) }
+    }
 
     fun onTogglePower() {
         scope.launch { settings.setEnabled(!settings.enabled.first()) }

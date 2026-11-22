@@ -12,6 +12,18 @@ fun interface HttpGet {
     fun get(url: String): HttpResult
 }
 
+private val TRUSTED_HOSTS = setOf(
+    "github.com", "api.github.com", "objects.githubusercontent.com", "github-releases.githubusercontent.com",
+)
+
+/** Solo se descarga por HTTPS desde los servidores de GitHub. */
+fun isTrustedDownloadUrl(url: String): Boolean = try {
+    val u = java.net.URI(url)
+    u.scheme == "https" && u.host in TRUSTED_HOSTS
+} catch (e: Exception) {
+    false
+}
+
 data class ReleaseInfo(val version: String, val apkUrl: String, val sha256: String?)
 
 /** Consulta la última release de un repositorio público de GitHub (sin token). */
@@ -36,7 +48,9 @@ class UpdateChecker(private val http: HttpGet, private val owner: String, privat
         for (i in 0 until assets.length()) {
             val a = assets.getJSONObject(i)
             if (a.optString("name").endsWith(".apk.sha256")) {
-                val res = http.get(a.getString("browser_download_url"))
+                val shaUrl = a.getString("browser_download_url")
+                if (!isTrustedDownloadUrl(shaUrl)) return null
+                val res = http.get(shaUrl)
                 if (res.code != 200) return null
                 return res.body.trim().split(Regex("\\s+")).firstOrNull()?.lowercase()?.takeIf { it.isNotEmpty() }
             }
@@ -51,6 +65,7 @@ class UpdateChecker(private val http: HttpGet, private val owner: String, privat
         for (i in 0 until assets.length()) {
             val a = assets.getJSONObject(i)
             if (a.optString("name").endsWith(".apk")) {
+                if (!isTrustedDownloadUrl(a.getString("browser_download_url"))) return null
                 val digest = a.optString("digest").takeIf { it.startsWith("sha256:") }?.removePrefix("sha256:")?.lowercase()
                 return ReleaseInfo(tag, a.getString("browser_download_url"), digest)
             }

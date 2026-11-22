@@ -4,7 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -25,15 +28,20 @@ fun PresetChip(
     onLongClick: (() -> Unit)? = null,
 ) {
     val shape = RoundedCornerShape(20.dp)
-    Text(
-        text = if (recommended) "★ $label" else label,
-        style = MaterialTheme.typography.bodyMedium,
-        color = if (selected) Tokens.OnBrand else Tokens.TextPrimary,
+    Box(
         modifier = modifier
+            .heightIn(min = 40.dp)
             .clip(shape)
             .background(if (selected) Tokens.BrandPrimary else Tokens.BgSurface)
             .border(1.dp, if (selected) Tokens.BrandPrimary else Tokens.Border, shape)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(horizontal = 16.dp, vertical = 8.dp),
-    )
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = if (recommended) "★ $label" else label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (selected) Tokens.OnBrand else Tokens.TextPrimary,
+        )
+    }
 }

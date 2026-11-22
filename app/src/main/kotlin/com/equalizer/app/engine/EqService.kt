@@ -50,6 +50,7 @@ class EqService : Service() {
         discovery = SessionDiscovery(this, EqRuntime.engine, scope).also { d ->
             d.start()
             scope.launch { d.dumpAvailable.collect { EqRuntime.dumpAvailable.value = it } }
+            scope.launch { d.playing.collect { EqRuntime.playing.value = it } }
         }
 
         scope.launch {
@@ -58,6 +59,7 @@ class EqService : Service() {
             }.collect { EqRuntime.engine.setCurve(it) }
         }
         scope.launch { detector.active.collect { EqRuntime.output.value = it } }
+        scope.launch { settings.method.collect { EqRuntime.engine.setMethod(it) } }
         scope.launch { settings.enabled.collect { EqRuntime.engine.setEnabled(it) } }
     }
 

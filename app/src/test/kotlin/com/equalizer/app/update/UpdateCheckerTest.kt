@@ -8,14 +8,14 @@ import org.junit.Test
 class UpdateCheckerTest {
     private val json = """
         {"tag_name":"v0.2.0","assets":[
-          {"name":"notes.txt","browser_download_url":"https://x/notes.txt"},
-          {"name":"equalizer-0.2.0.apk","browser_download_url":"https://x/equalizer-0.2.0.apk","digest":"sha256:ABCDEF"}
+          {"name":"notes.txt","browser_download_url":"https://github.com/o/r/releases/download/notes.txt"},
+          {"name":"equalizer-0.2.0.apk","browser_download_url":"https://github.com/o/r/releases/download/equalizer-0.2.0.apk","digest":"sha256:ABCDEF"}
         ]}
     """.trimIndent()
 
     @Test fun latest_parsesReleaseJson() = runTest {
         val r = UpdateChecker({ HttpResult(200, json) }, "o", "r").latest()
-        assertEquals(ReleaseInfo("0.2.0", "https://x/equalizer-0.2.0.apk", "abcdef"), r)
+        assertEquals(ReleaseInfo("0.2.0", "https://github.com/o/r/releases/download/equalizer-0.2.0.apk", "abcdef"), r)
     }
 
     @Test fun latest_noApkAsset_returnsNull() = runTest {
@@ -38,13 +38,13 @@ class UpdateCheckerTest {
     @Test fun latest_fetchesSha256FromSiblingAsset() = runTest {
         val body = """
             {"tag_name":"v0.3.0","assets":[
-              {"name":"equalizer-0.3.0.apk","browser_download_url":"https://x/a.apk"},
-              {"name":"equalizer-0.3.0.apk.sha256","browser_download_url":"https://x/a.apk.sha256"}
+              {"name":"equalizer-0.3.0.apk","browser_download_url":"https://github.com/o/r/releases/download/a.apk"},
+              {"name":"equalizer-0.3.0.apk.sha256","browser_download_url":"https://github.com/o/r/releases/download/a.apk.sha256"}
             ]}
         """.trimIndent()
         val http = HttpGet { url ->
             if (url.endsWith(".sha256")) HttpResult(200, "ABC123  equalizer-0.3.0.apk\n") else HttpResult(200, body)
         }
-        assertEquals(ReleaseInfo("0.3.0", "https://x/a.apk", "abc123"), UpdateChecker(http, "o", "r").latest())
+        assertEquals(ReleaseInfo("0.3.0", "https://github.com/o/r/releases/download/a.apk", "abc123"), UpdateChecker(http, "o", "r").latest())
     }
 }

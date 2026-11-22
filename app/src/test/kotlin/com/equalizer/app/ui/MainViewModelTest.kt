@@ -120,4 +120,26 @@ class MainViewModelTest {
         f.dump.value = false
         f.vm.uiState.first { !it.dumpAvailable }
     }
+
+    @Test fun viewModel_defaultMethodIsGlobal_andSelectMethodPersists() = runTest(UnconfinedTestDispatcher()) {
+        val f = fixture(backgroundScope, btOutput)
+        assertEquals(com.equalizer.app.engine.EqMethod.GLOBAL, f.vm.uiState.value.method)
+        f.vm.onSelectMethod(com.equalizer.app.engine.EqMethod.PER_APP)
+        assertEquals(com.equalizer.app.engine.EqMethod.PER_APP, f.vm.uiState.first { it.method == com.equalizer.app.engine.EqMethod.PER_APP }.method)
+    }
+
+    @Test fun viewModel_exposesEngineStatusAndSessionlessApp() = runTest(UnconfinedTestDispatcher()) {
+        val status = MutableStateFlow(com.equalizer.app.engine.EngineStatus(com.equalizer.app.engine.EqMethod.PER_APP, true))
+        val sessions = MutableStateFlow(mapOf(0 to "com.brave.browser"))
+        val registry = DeviceRegistry(PreferenceDataStoreFactory.create { tmp.newFolder().resolve("d.preferences_pb") })
+        val settings = Settings(PreferenceDataStoreFactory.create { tmp.newFolder().resolve("s.preferences_pb") })
+        val custom = CustomPresets(PreferenceDataStoreFactory.create { tmp.newFolder().resolve("c.preferences_pb") })
+        val vm = MainViewModel(
+            backgroundScope, MutableStateFlow(btOutput), sessions, MutableStateFlow(emptySet()), MutableStateFlow(true),
+            registry, settings, custom, status,
+        ) {}
+        val s = vm.uiState.first { it.fellBack }
+        assertEquals(com.equalizer.app.engine.EqMethod.PER_APP, s.activeMethod)
+        assertEquals(true, s.sessionlessApp)
+    }
 }

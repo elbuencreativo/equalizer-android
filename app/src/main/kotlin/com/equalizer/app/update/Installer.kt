@@ -22,6 +22,7 @@ class Installer(private val context: Context) {
             return InstallResult.Failed("Permite instalar apps de esta fuente y vuelve a intentar")
         }
         checkReleaseVerifiable(r)?.let { return it }
+        if (!isTrustedDownloadUrl(r.apkUrl)) return InstallResult.Failed("La dirección de descarga no es de GitHub; no se instala")
         val dir = File(context.cacheDir, "updates").apply { mkdirs() }
         val target = File(dir, "update.apk")
         val result = withContext(Dispatchers.IO) { downloadVerified({ open(r.apkUrl) }, target, r.sha256) }

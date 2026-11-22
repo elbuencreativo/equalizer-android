@@ -63,7 +63,7 @@ fun BandSlider(freqHz: Int, gainDb: Float, onChange: (Float) -> Unit, modifier: 
         Box(
             Modifier
                 .width(32.dp)
-                .height(260.dp)
+                .height(180.dp)
                 .semantics {
                     contentDescription = "Banda ${formatFreq(freqHz)} Hz"
                     stateDescription = "${formatGain(gainDb)} dB"
@@ -82,7 +82,7 @@ fun BandSlider(freqHz: Int, gainDb: Float, onChange: (Float) -> Unit, modifier: 
                     }
                 },
         ) {
-            Canvas(Modifier.width(32.dp).height(260.dp)) {
+            Canvas(Modifier.width(32.dp).height(180.dp)) {
                 val trackW = 8.dp.toPx()
                 val thumbR = 10.dp.toPx()
                 val top = thumbR

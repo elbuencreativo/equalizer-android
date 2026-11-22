@@ -8,6 +8,16 @@ Diseño: `docs/superpowers/specs/2026-11-22-equalizer-android-design.md`
 Plan: `docs/superpowers/plans/2026-11-22-equalizer-android.md`
 Resultados en el A57: `docs/superpowers/results/2026-prototype-matrix.md`
 
+## Instalar en otro teléfono o tableta (sin computador)
+
+1. Abre la página de [Releases](https://github.com/elbuencreativo/equalizer-android/releases/latest) y descarga el archivo `equalizer-<versión>.apk`.
+2. Ábrelo. Android pedirá permitir instalar apps desde esa fuente (el navegador o el gestor de archivos): acéptalo solo para esta instalación.
+3. Abre Equalizer y acepta los permisos de notificaciones y Bluetooth.
+
+Funciona en Android 9 o superior. El método «Global» (el predeterminado) no necesita más permisos.
+Para ver qué canción suena en la tarjeta «Ahora suena», la app te lleva a darle acceso a notificaciones (solo lee las sesiones de medios).
+Sin ADB, el modo «Por app» no descubre apps que no avisan su sesión; por eso se recomienda «Global».
+
 ## Instalar por USB (primera vez)
 
 1. Activa la depuración USB en el teléfono y conéctalo.

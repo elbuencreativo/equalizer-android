@@ -37,3 +37,15 @@ class PlaybackDumpTest {
         assertEquals(emptySet<Int>(), presentSessionIds(spotify, ownUid = 10335))
     }
 }
+
+class SessionlessPlaybackTest {
+    private val brave = "  AudioPlaybackConfiguration piid:1 deviceIds:[3] type:AAudio u/pid:10354/29051 state:started attr:AudioAttributes: usage=USAGE_MEDIA content=CONTENT_TYPE_UNKNOWN source=DEFAULT flags=0x0 tags= bundle=null sessionId:-1 mutedState:none"
+
+    @org.junit.Test fun sessionlessStream_mapsToGlobalSession0() {
+        org.junit.Assert.assertEquals(listOf(PlaybackSession(10354, 0)), activeMediaSessions(brave, ownUid = 10000))
+    }
+
+    @org.junit.Test fun sessionlessStream_countsAsPresent() {
+        org.junit.Assert.assertEquals(setOf(0), presentSessionIds(brave, ownUid = 10000))
+    }
+}
