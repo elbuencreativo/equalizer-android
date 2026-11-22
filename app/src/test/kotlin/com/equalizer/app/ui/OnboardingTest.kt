@@ -31,3 +31,14 @@ class OnboardingTest {
         }
     }
 }
+
+class BalanceSettingsTest {
+    @get:Rule val tmp = TemporaryFolder()
+
+    @Test fun balance_defaultsToCenter_andPersists() = runTest {
+        val s = Settings(PreferenceDataStoreFactory.create { tmp.newFolder().resolve("s.preferences_pb") })
+        assertEquals(0f, s.balance.first(), 0.0001f)
+        s.setBalance(-0.4f)
+        assertEquals(-0.4f, s.balance.first(), 0.0001f)
+    }
+}

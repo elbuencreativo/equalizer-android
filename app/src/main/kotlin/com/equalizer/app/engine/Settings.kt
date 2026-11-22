@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.equalizer.app.core.Preset
@@ -17,6 +18,7 @@ class Settings(private val store: DataStore<Preferences>) {
     private val enabledKey = booleanPreferencesKey("enabled")
     private val presetKey = stringPreferencesKey("preset")
     private val onboardingKey = booleanPreferencesKey("onboarding_done")
+    private val balanceKey = floatPreferencesKey("balance")
     private val methodKey = stringPreferencesKey("method")
     private val offsetsKey = stringPreferencesKey("offsets")
 
@@ -32,6 +34,10 @@ class Settings(private val store: DataStore<Preferences>) {
     val onboardingDone: Flow<Boolean> = store.data.map { it[onboardingKey] ?: false }
 
     suspend fun setOnboardingDone(done: Boolean) { store.edit { it[onboardingKey] = done } }
+
+    val balance: Flow<Float> = store.data.map { it[balanceKey] ?: 0f }
+
+    suspend fun setBalance(v: Float) { store.edit { it[balanceKey] = v.coerceIn(-1f, 1f) } }
 
     suspend fun setMethod(m: EqMethod) { store.edit { it[methodKey] = m.name } }
 

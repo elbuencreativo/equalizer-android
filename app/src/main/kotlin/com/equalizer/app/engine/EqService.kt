@@ -54,8 +54,8 @@ class EqService : Service() {
         }
 
         scope.launch {
-            combine(detector.active, settings.preset, settings.offsets) { out, preset, offsets ->
-                effective(out.deviceType, preset, offsets)
+            combine(detector.active, settings.preset, settings.offsets, settings.balance) { out, preset, offsets, balance ->
+                effective(out.deviceType, preset, offsets).copy(balance = balance)
             }.collect { EqRuntime.engine.setCurve(it) }
         }
         scope.launch { detector.active.collect { EqRuntime.output.value = it } }

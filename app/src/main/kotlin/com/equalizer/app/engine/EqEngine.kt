@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 private const val TAG = "EqEngine"
 
 /** Cómo se aplica el ecualizador: a toda la mezcla del sistema o a cada app por separado. */
-enum class EqMethod { GLOBAL, PER_APP }
+enum class EqMethod { GLOBAL, LEGACY, PER_APP }
 
 /** [active] es el método que realmente se está usando; [fellBack] indica que se cambió solo porque el global falló. */
 data class EngineStatus(val active: EqMethod, val fellBack: Boolean)
@@ -34,12 +34,18 @@ interface EffectHandle {
  * ([EngineStatus.fellBack]). Método PER_APP: un efecto por cada sesión de audio de una app.
  * Nunca están activos los dos a la vez, para no aplicar el ecualizador dos veces.
  */
-class EqEngine(method: EqMethod = EqMethod.PER_APP, private val factory: (sessionId: Int) -> EffectHandle) {
+class EqEngine(
+    method: EqMethod = EqMethod.PER_APP,
+    private val legacyFactory: ((sessionId: Int) -> EffectHandle)? = null,
+    private val factory: (sessionId: Int) -> EffectHandle,
+) {
     private val handles = HashMap<Int, EffectHandle>()
     private var curve: Combined = combine(EqCurve.FLAT, EqCurve.FLAT)
     private var enabled = false
     private var preferred = method
-    private var fellBack = false
+    private var globalFailed = false
+    private var legacyFailed = false
+    private var builtFor: EqMethod? = null
 
     private val _sessions = MutableStateFlow<Map<Int, String>>(emptyMap())
     val sessions: StateFlow<Map<Int, String>> = _sessions
@@ -50,12 +56,28 @@ class EqEngine(method: EqMethod = EqMethod.PER_APP, private val factory: (sessio
     private val _status = MutableStateFlow(EngineStatus(method, false))
     val status: StateFlow<EngineStatus> = _status
 
-    private fun active() = if (preferred == EqMethod.GLOBAL && !fellBack) EqMethod.GLOBAL else EqMethod.PER_APP
+    private fun legacyOk() = legacyFactory != null && !legacyFailed
+
+    /** Método que se usa de verdad: el elegido y, si falla, el siguiente de la cadena GLOBAL → LEGACY → PER_APP. */
+    private fun active(): EqMethod = when (preferred) {
+        EqMethod.GLOBAL -> when {
+            !globalFailed -> EqMethod.GLOBAL
+            legacyOk() -> EqMethod.LEGACY
+            else -> EqMethod.PER_APP
+        }
+        EqMethod.LEGACY -> if (legacyOk()) EqMethod.LEGACY else EqMethod.PER_APP
+        EqMethod.PER_APP -> EqMethod.PER_APP
+    }
+
+    private fun markGlobalSlotFailed() {
+        if (active() == EqMethod.LEGACY) legacyFailed = true else globalFailed = true
+    }
 
     @Synchronized fun setMethod(m: EqMethod) {
         Log.i(TAG, "METHOD $m")
         preferred = m
-        fellBack = false // cada elección reintenta el método global
+        globalFailed = false // cada elección reintenta los métodos globales
+        legacyFailed = false
         rebuild()
     }
 
@@ -83,7 +105,7 @@ class EqEngine(method: EqMethod = EqMethod.PER_APP, private val factory: (sessio
 
     @Synchronized fun setCurve(c: Combined) {
         curve = c
-        var globalFailed = false
+        var slotFailed = false
         handles.entries.toList().forEach { (id, h) ->
             try {
                 h.apply(c)
@@ -91,10 +113,10 @@ class EqEngine(method: EqMethod = EqMethod.PER_APP, private val factory: (sessio
                 Log.w(TAG, "apply failed session=$id: $e")
                 handles.remove(id)
                 safeRelease(h)
-                if (id == GLOBAL_ID) globalFailed = true else _failed.value = _failed.value + id
+                if (id == GLOBAL_ID) slotFailed = true else _failed.value = _failed.value + id
             }
         }
-        if (globalFailed) { fellBack = true; rebuild() }
+        if (slotFailed) { markGlobalSlotFailed(); rebuild() }
     }
 
     @Synchronized fun setEnabled(on: Boolean) {
@@ -105,30 +127,38 @@ class EqEngine(method: EqMethod = EqMethod.PER_APP, private val factory: (sessio
 
     /** Deja vivos exactamente los efectos que el método activo necesita. */
     private fun rebuild() {
+        val act = active()
+        if (builtFor != act) {
+            handles.values.forEach { safeRelease(it) }
+            handles.clear()
+            builtFor = act
+        }
         val wanted: Set<Int> = when {
             !enabled -> emptySet()
-            active() == EqMethod.GLOBAL -> setOf(GLOBAL_ID)
+            act != EqMethod.PER_APP -> setOf(GLOBAL_ID)
             else -> _sessions.value.keys.filter { it != GLOBAL_ID }.toSet()
         }
         handles.keys.filter { it !in wanted }.forEach { id -> handles.remove(id)?.let { safeRelease(it) } }
         wanted.forEach { ensureHandle(it) }
-        _status.value = EngineStatus(active(), fellBack)
+        // active() otra vez: un fallo dentro de ensureHandle pudo cambiar el método durante este rebuild.
+        val now = active()
+        _status.value = EngineStatus(now, now != preferred)
     }
 
     private fun ensureHandle(id: Int) {
         if (handles.containsKey(id)) return
         var h: EffectHandle? = null
         try {
-            h = factory(id)
+            h = (if (active() == EqMethod.LEGACY) legacyFactory!! else factory)(id)
             h.apply(curve)
             handles[id] = h
             _failed.value = _failed.value - id
         } catch (e: Exception) {
-            Log.w(TAG, "effect failed session=$id: $e")
+            Log.w(TAG, "effect failed session=$id", e)
             h?.let { safeRelease(it) }
             if (id == GLOBAL_ID) {
-                fellBack = true
-                rebuild() // pasa a PER_APP con las sesiones conocidas
+                markGlobalSlotFailed()
+                rebuild() // pasa al siguiente método de la cadena
             } else {
                 _failed.value = _failed.value + id
             }

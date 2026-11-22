@@ -107,3 +107,68 @@ class EqEngineMethodTest {
         assertTrue(r.engine.sessions.value.size <= 64)
     }
 }
+
+class EqEngineLegacyChainTest {
+    private class H(val id: Int, val kind: String) : EffectHandle {
+        var released = false
+        override fun apply(c: com.equalizer.app.core.Combined) {}
+        override fun release() { released = true }
+    }
+
+    private class Rig(method: EqMethod, val failGlobal: Boolean = false, val failLegacy: Boolean = false, withLegacy: Boolean = true) {
+        val handles = mutableListOf<H>()
+        val engine = EqEngine(
+            method,
+            if (withLegacy) { id: Int ->
+                if (failLegacy) throw IllegalStateException("legacy no")
+                H(id, "legacy").also { handles.add(it) }
+            } else null,
+        ) { id ->
+            if (id == 0 && failGlobal) throw IllegalStateException("global no")
+            H(id, "dp").also { handles.add(it) }
+        }
+        fun live() = handles.filter { !it.released }.map { it.kind + it.id }.sorted()
+    }
+
+    @Test fun globalFails_legacyWorks_usesLegacy() {
+        val r = Rig(EqMethod.GLOBAL, failGlobal = true)
+        r.engine.setEnabled(true)
+        assertEquals(listOf("legacy0"), r.live())
+        assertEquals(EngineStatus(EqMethod.LEGACY, true), r.engine.status.value)
+    }
+
+    @Test fun globalAndLegacyFail_fallsToPerApp() {
+        val r = Rig(EqMethod.GLOBAL, failGlobal = true, failLegacy = true)
+        r.engine.onSessionOpened(5, "spotify")
+        r.engine.setEnabled(true)
+        assertEquals(listOf("dp5"), r.live())
+        assertEquals(EngineStatus(EqMethod.PER_APP, true), r.engine.status.value)
+    }
+
+    @Test fun globalWorks_legacyNeverCreated() {
+        val r = Rig(EqMethod.GLOBAL)
+        r.engine.setEnabled(true)
+        assertEquals(listOf("dp0"), r.live())
+        assertEquals(EngineStatus(EqMethod.GLOBAL, false), r.engine.status.value)
+    }
+
+    @Test fun userPicksLegacy_andSwitchingBackReplacesTheHandle() {
+        val r = Rig(EqMethod.LEGACY)
+        r.engine.setEnabled(true)
+        assertEquals(listOf("legacy0"), r.live())
+        r.engine.setMethod(EqMethod.GLOBAL)
+        assertEquals(listOf("dp0"), r.live())
+    }
+
+    @Test fun legacyChosenButFails_fallsToPerApp() {
+        val r = Rig(EqMethod.LEGACY, failLegacy = true)
+        r.engine.setEnabled(true)
+        assertEquals(EngineStatus(EqMethod.PER_APP, true), r.engine.status.value)
+    }
+
+    @Test fun noLegacyFactory_globalFailureGoesStraightToPerApp() {
+        val r = Rig(EqMethod.GLOBAL, failGlobal = true, withLegacy = false)
+        r.engine.setEnabled(true)
+        assertEquals(EqMethod.PER_APP, r.engine.status.value.active)
+    }
+}

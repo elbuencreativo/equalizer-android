@@ -16,8 +16,8 @@ android {
         applicationId = "com.equalizer.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.1.7"
+        versionCode = 9
+        versionName = "0.1.8"
         buildConfigField("String", "GITHUB_OWNER", "\"elbuencreativo\"")
         buildConfigField("String", "GITHUB_REPO", "\"equalizer-android\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

@@ -25,6 +25,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -44,6 +46,7 @@ import com.equalizer.app.core.BAND_FREQS_HZ
 import com.equalizer.app.core.CustomPreset
 import com.equalizer.app.core.DeviceType
 import com.equalizer.app.core.Preset
+import com.equalizer.app.core.balanceLabel
 import com.equalizer.app.engine.EqMethod
 import com.equalizer.app.ui.components.BandSlider
 import com.equalizer.app.ui.components.DeviceCard
@@ -63,6 +66,7 @@ fun MainScreen(
     onDeleteCustom: (String) -> Unit = {},
     onSelectMethod: (EqMethod) -> Unit = {},
     onShowGuide: () -> Unit = {},
+    onBalanceChanged: (Float) -> Unit = {},
     trackAccess: Boolean = true,
     onEnableTrackAccess: () -> Unit = {},
     footer: @Composable () -> Unit = {},
@@ -109,7 +113,10 @@ fun MainScreen(
                 }
                 if (state.fellBack) {
                     Text(
-                        "El método «Global» dejó de funcionar y la app cambió sola al modo «Por app». Mira los detalles en Configuración.",
+                        if (state.activeMethod == EqMethod.LEGACY)
+                            "El método «Global» no funciona en este teléfono; la app usa el ecualizador «Clásico», con menos bandas y sin balance. Mira los detalles en Configuración."
+                        else
+                            "Los métodos que ecualizan todo el sonido dejaron de funcionar y la app cambió sola al modo «Por app». Mira los detalles en Configuración.",
                         color = Tokens.Warning, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -127,6 +134,7 @@ fun MainScreen(
                             }
                         }
                     }
+                    BalanceSection(state.balance, state.activeMethod != EqMethod.LEGACY, onBalanceChanged)
                 }
             } else {
                 MethodSection(state, onSelectMethod)
@@ -252,10 +260,39 @@ private fun Section(title: String, content: @Composable () -> Unit) {
 }
 
 @Composable
+private fun BalanceSection(balance: Float, supported: Boolean, onChange: (Float) -> Unit) {
+    Section("Balance") {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Izq.", color = Tokens.TextSecondary, style = MaterialTheme.typography.labelLarge)
+            Slider(
+                value = balance, onValueChange = onChange, valueRange = -1f..1f, enabled = supported,
+                colors = SliderDefaults.colors(
+                    thumbColor = Tokens.BrandPrimary, activeTrackColor = Tokens.BrandPrimary,
+                    inactiveTrackColor = Tokens.ControlOff,
+                ),
+                modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+            )
+            Text("Der.", color = Tokens.TextSecondary, style = MaterialTheme.typography.labelLarge)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                if (supported) balanceLabel(balance) else "El método «Clásico» no permite ajustar el balance.",
+                color = if (supported) Tokens.TextPrimary else Tokens.TextSecondary,
+                style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f),
+            )
+            if (supported && balance != 0f) {
+                TextButton(onClick = { onChange(0f) }) { Text("Centrar", color = Tokens.BrandPrimary) }
+            }
+        }
+    }
+}
+
+@Composable
 private fun MethodSection(state: MainUiState, onSelectMethod: (EqMethod) -> Unit) {
     Section("Método de ecualización") {
         listOf(
-            Triple(EqMethod.GLOBAL, "Global (recomendado)", "Ecualiza todo el sonido del teléfono, incluidos los navegadores como Brave. Es el que funciona con más apps."),
+            Triple(EqMethod.GLOBAL, "Global (recomendado)", "Ecualiza todo el sonido del teléfono, incluidos los navegadores como Brave. Es el que funciona con más apps y el único con todas las funciones."),
+            Triple(EqMethod.LEGACY, "Clásico", "Para teléfonos viejos donde «Global» no funciona. Ecualiza todo el sonido, pero con menos bandas y sin balance."),
             Triple(EqMethod.PER_APP, "Por app", "Ecualiza cada app por separado. Es el método oficial de Android, pero no alcanza a los navegadores."),
         ).forEach { (m, title, desc) ->
             Row(
@@ -271,10 +308,16 @@ private fun MethodSection(state: MainUiState, onSelectMethod: (EqMethod) -> Unit
         }
         if (state.fellBack) {
             Text(
-                "El método «Global» dejó de funcionar en este teléfono. Lo más probable es que una actualización de Android lo haya bloqueado. " +
-                    "Para que sigas escuchando con ecualizador, la app cambió sola al método «Por app». " +
-                    "Con este método los navegadores no se ecualizan. Si ves esto, el ecualizador no está roto: " +
-                    "solo cambió la forma de aplicarlo.",
+                when (state.activeMethod) {
+                    EqMethod.LEGACY ->
+                        "El método «Global» no funciona en este teléfono (su sistema de audio lo rechaza). " +
+                            "Para que sigas escuchando con ecualizador, la app cambió sola al método «Clásico». " +
+                            "Tiene menos bandas, así que el ajuste es menos fino, y no permite balance. El ecualizador no está roto: solo cambió la forma de aplicarlo."
+                    else ->
+                        "Los métodos «Global» y «Clásico» dejaron de funcionar en este teléfono. Lo más probable es que una actualización de Android los haya bloqueado. " +
+                            "Para que sigas escuchando con ecualizador, la app cambió sola al método «Por app». " +
+                            "Con este método los navegadores no se ecualizan. El ecualizador no está roto: solo cambió la forma de aplicarlo."
+                },
                 color = Tokens.Warning, style = MaterialTheme.typography.bodySmall,
             )
         } else if (state.activeMethod == EqMethod.PER_APP && state.sessionlessApp) {
@@ -285,7 +328,7 @@ private fun MethodSection(state: MainUiState, onSelectMethod: (EqMethod) -> Unit
             )
         }
         Text(
-            "Si al cambiar de preset no notas diferencia en alguna app, prueba el otro método.",
+            "Si al cambiar de preset no notas diferencia en alguna app, prueba otro método.",
             color = Tokens.TextTertiary, style = MaterialTheme.typography.bodySmall,
         )
     }

@@ -11,6 +11,7 @@ import com.equalizer.app.core.effective
 import com.equalizer.app.core.MAX_GAIN_DB
 import com.equalizer.app.core.presetCurve
 import com.equalizer.app.core.recommendedFor
+import com.equalizer.app.core.snapBalance
 import com.equalizer.app.device.ActiveOutput
 import com.equalizer.app.device.DeviceRegistry
 import com.equalizer.app.engine.EngineStatus
@@ -44,6 +45,7 @@ data class MainUiState(
     /** Hay una app sonando sin sesión propia (p. ej. un navegador). */
     val sessionlessApp: Boolean = false,
     val nowPlaying: List<NowPlayingItem> = emptyList(),
+    val balance: Float = 0f,
 )
 
 class MainViewModel(
@@ -76,6 +78,7 @@ class MainViewModel(
         .combine(custom.all) { s, c -> s.copy(customPresets = c) }
         .combine(dumpAvailable) { s, d -> s.copy(dumpAvailable = d) }
         .combine(settings.method) { s, m -> s.copy(method = m) }
+        .combine(settings.balance) { s, b -> s.copy(balance = b) }
         .combine(nowPlaying) { s, n -> s.copy(nowPlaying = n) }
         .combine(engineStatus) { s, e -> s.copy(activeMethod = e.active, fellBack = e.fellBack) }
         .stateIn(
@@ -85,6 +88,10 @@ class MainViewModel(
 
     fun onSelectMethod(m: EqMethod) {
         scope.launch { settings.setMethod(m) }
+    }
+
+    fun onBalanceChanged(v: Float) {
+        scope.launch { settings.setBalance(snapBalance(v)) }
     }
 
     fun onTogglePower() {

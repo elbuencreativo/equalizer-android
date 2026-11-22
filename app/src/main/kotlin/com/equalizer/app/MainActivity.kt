@@ -100,6 +100,7 @@ class MainActivity : ComponentActivity() {
                 MainScreen(
                     state, vm::onTogglePower, vm::onSelectPreset, vm::onAssignType, vm::onBandChanged,
                     onSaveCustom = vm::onSaveCustom, onApplyCustom = vm::onApplyCustom, onDeleteCustom = vm::onDeleteCustom, onSelectMethod = vm::onSelectMethod, onShowGuide = { showGuide = true },
+                    onBalanceChanged = vm::onBalanceChanged,
                     trackAccess = trackAccess,
                     onEnableTrackAccess = { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
                     footer = { UpdateSection(updater.currentVersion, updateState, updater::check, updater::install) },

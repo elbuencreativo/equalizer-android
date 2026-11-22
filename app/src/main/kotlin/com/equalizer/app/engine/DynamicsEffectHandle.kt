@@ -3,6 +3,7 @@ package com.equalizer.app.engine
 import android.media.audiofx.DynamicsProcessing
 import com.equalizer.app.core.BAND_FREQS_HZ
 import com.equalizer.app.core.Combined
+import com.equalizer.app.core.channelGainsDb
 
 class DynamicsEffectHandle(sessionId: Int) : EffectHandle {
     private val dp: DynamicsProcessing
@@ -30,7 +31,9 @@ class DynamicsEffectHandle(sessionId: Int) : EffectHandle {
         c.bands.forEachIndexed { i, g ->
             dp.setPreEqBandAllChannelsTo(i, DynamicsProcessing.EqBand(true, BAND_FREQS_HZ[i].toFloat(), g))
         }
-        dp.setInputGainAllChannelsTo(c.preampDb)
+        val (left, right) = channelGainsDb(c.preampDb, c.balance)
+        dp.setInputGainbyChannel(0, left)
+        dp.setInputGainbyChannel(1, right)
     }
 
     override fun release() {

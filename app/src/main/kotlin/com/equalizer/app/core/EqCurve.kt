@@ -14,7 +14,7 @@ data class EqCurve(val gainsDb: List<Float>) {
     }
 }
 
-data class Combined(val bands: List<Float>, val preampDb: Float)
+data class Combined(val bands: List<Float>, val preampDb: Float, val balance: Float = 0f)
 
 fun combine(base: EqCurve, preset: EqCurve): Combined {
     val bands = base.gainsDb.zip(preset.gainsDb) { b, p -> (b + p).coerceIn(-MAX_GAIN_DB, MAX_GAIN_DB) }
