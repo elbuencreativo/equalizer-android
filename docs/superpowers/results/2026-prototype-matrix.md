@@ -7,7 +7,8 @@ Instaladas: Spotify, Pocket Casts, Audible, Voice (de.ph1b.audiobook), YouTube, 
 |---|---|---|---|---|
 | Spotify | sí | sí (sesión 98529, 4 avisos seguidos) | sí, volumen cae de forma obvia | DynamicsProcessing visible en audio_flinger |
 | Pocket Casts | sí | no (ni con reproducción nueva) | sí vía descubrimiento por `dumpsys audio` (DUMP), volumen cae de forma obvia | Usa su propio Loudness Enhancer; conviven |
-| Audible / Voice | sí (una) | pendiente | pendiente | |
+| Voice (de.ph1b.audiobook) | sí | no | sí vía `dumpsys audio` (DUMP), volumen cae de forma obvia | App de audiolibros de Leo |
+| Audible | no | no probada | no probada | |
 | YouTube | no | pendiente | pendiente | |
 | Netflix | no | pendiente | pendiente | |
 
@@ -18,3 +19,6 @@ Instaladas: Spotify, Pocket Casts, Audible, Voice (de.ph1b.audiobook), YouTube, 
 - Los presets se notan poco en el parlante del teléfono porque su perfil base ya recorta graves. Con audífonos el cambio es mayor. Valorar presets más marcados.
 - El receptor dinámico dentro del servicio recibe los avisos de Spotify en One UI 9.
 - Samsung Dolby Atmos / EQ: pendiente de probar.
+
+## Veredicto de la compuerta (2026-11-22)
+Spotify, Pocket Casts y Voice responden en el A57 (con respaldo DUMP). Compuerta superada: se sigue con la interfaz. YouTube, Netflix, Dolby Atmos y la prueba con audífonos Bluetooth quedan para la matriz de la release (Tarea 9).
