@@ -11,9 +11,7 @@ import android.media.audiofx.AudioEffect
 import android.os.Build
 import android.os.IBinder
 import androidx.core.content.ContextCompat
-import com.equalizer.app.core.baseProfile
-import com.equalizer.app.core.combine as combineCurves
-import com.equalizer.app.core.presetCurve
+import com.equalizer.app.core.effective
 import com.equalizer.app.device.DeviceRegistry
 import com.equalizer.app.device.OutputDetector
 import com.equalizer.app.device.deviceDataStore
@@ -48,10 +46,11 @@ class EqService : Service() {
         discovery = SessionDiscovery(this, EqRuntime.engine, scope).also { it.start() }
 
         scope.launch {
-            combine(detector.active, settings.preset) { out, preset ->
-                combineCurves(baseProfile(out.deviceType), presetCurve(preset))
+            combine(detector.active, settings.preset, settings.offsets) { out, preset, offsets ->
+                effective(out.deviceType, preset, offsets)
             }.collect { EqRuntime.engine.setCurve(it) }
         }
+        scope.launch { detector.active.collect { EqRuntime.output.value = it } }
         scope.launch { settings.enabled.collect { EqRuntime.engine.setEnabled(it) } }
     }
 
