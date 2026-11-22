@@ -61,6 +61,8 @@ class MainActivity : ComponentActivity() {
             Text("Preset actual: ${preset.displayName}")
             Button(onClick = { scope.launch { settings.setPreset(Preset.BASS_BOOST) } }) { Text("Probar Bass Boost") }
             Button(onClick = { scope.launch { settings.setPreset(Preset.FLAT) } }) { Text("Plano") }
+            Button(onClick = { EqRuntime.engine.setCurve(com.equalizer.app.core.Combined(List(10) { -12f }, -12f)) }) { Text("PRUEBA: bajar todo -24 dB") }
+            Button(onClick = { EqRuntime.engine.setCurve(com.equalizer.app.core.Combined(List(10) { 0f }, 0f)) }) { Text("PRUEBA: restaurar 0 dB") }
             Text("Sesiones detectadas: ${sessions.size}")
             sessions.forEach { (id, pkg) -> Text("• $pkg (sesión $id)${if (id in failed) " — falló" else ""}") }
         }
