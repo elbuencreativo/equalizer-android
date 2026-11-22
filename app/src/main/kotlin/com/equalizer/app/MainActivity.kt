@@ -22,6 +22,11 @@ import com.equalizer.app.engine.EqService
 import com.equalizer.app.engine.Settings
 import com.equalizer.app.engine.settingsDataStore
 import com.equalizer.app.ui.MainScreen
+import com.equalizer.app.ui.UpdateSection
+import com.equalizer.app.update.Installer
+import com.equalizer.app.update.RealHttp
+import com.equalizer.app.update.UpdateChecker
+import com.equalizer.app.update.UpdateController
 import com.equalizer.app.ui.MainViewModel
 import com.equalizer.app.ui.theme.EqTheme
 
@@ -43,10 +48,20 @@ class MainActivity : ComponentActivity() {
                         DeviceRegistry(deviceDataStore), Settings(settingsDataStore), CustomPresets(customPresetsDataStore),
                     ) { EqRuntime.detector?.refresh() }
                 }
+                val updater = remember {
+                    val installer = Installer(applicationContext)
+                    UpdateController(
+                        scope, BuildConfig.VERSION_NAME,
+                        { UpdateChecker(RealHttp, BuildConfig.GITHUB_OWNER, BuildConfig.GITHUB_REPO).latest() },
+                        { installer.downloadAndInstall(it) },
+                    )
+                }
+                val updateState by updater.state.collectAsState()
                 val state by vm.uiState.collectAsState()
                 MainScreen(
                     state, vm::onTogglePower, vm::onSelectPreset, vm::onAssignType, vm::onBandChanged,
                     onSaveCustom = vm::onSaveCustom, onApplyCustom = vm::onApplyCustom, onDeleteCustom = vm::onDeleteCustom,
+                    footer = { UpdateSection(updater.currentVersion, updateState, updater::check, updater::install) },
                 )
             }
         }

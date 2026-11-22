@@ -49,6 +49,7 @@ fun MainScreen(
     onSaveCustom: (String) -> Unit = {},
     onApplyCustom: (CustomPreset) -> Unit = {},
     onDeleteCustom: (String) -> Unit = {},
+    footer: @Composable () -> Unit = {},
 ) {
     var saving by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<String?>(null) }
@@ -127,6 +128,7 @@ fun MainScreen(
                 )
             }
         }
+        footer()
         Spacer(Modifier.height(16.dp))
     }
 
