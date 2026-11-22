@@ -15,14 +15,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
 import com.equalizer.app.core.BAND_FREQS_HZ
+import com.equalizer.app.core.CustomPreset
 import com.equalizer.app.core.DeviceType
 import com.equalizer.app.core.Preset
 import com.equalizer.app.ui.components.BandSlider
@@ -38,7 +46,12 @@ fun MainScreen(
     onSelectPreset: (Preset) -> Unit,
     onAssignType: (DeviceType) -> Unit,
     onBandChanged: (Int, Float) -> Unit,
+    onSaveCustom: (String) -> Unit = {},
+    onApplyCustom: (CustomPreset) -> Unit = {},
+    onDeleteCustom: (String) -> Unit = {},
 ) {
+    var saving by remember { mutableStateOf(false) }
+    var deleting by remember { mutableStateOf<String?>(null) }
     val recommendedPresets = state.recommended.values.toSet()
     Column(
         Modifier
@@ -85,6 +98,10 @@ fun MainScreen(
                     Preset.values().forEach { p ->
                         PresetChip(p.displayName, p == state.preset, p in recommendedPresets, { onSelectPreset(p) })
                     }
+                    state.customPresets.forEach { c ->
+                        PresetChip(c.name, false, false, { onApplyCustom(c) }, onLongClick = { deleting = c.name })
+                    }
+                    PresetChip("+ Guardar como…", false, false, { saving = true })
                 }
             }
 
@@ -112,6 +129,28 @@ fun MainScreen(
         }
         Spacer(Modifier.height(16.dp))
     }
+
+    if (saving) NameDialog(onConfirm = { onSaveCustom(it); saving = false }, onDismiss = { saving = false })
+    deleting?.let { name ->
+        AlertDialog(
+            onDismissRequest = { deleting = null },
+            title = { Text("¿Borrar «$name»?") },
+            confirmButton = { TextButton(onClick = { onDeleteCustom(name); deleting = null }) { Text("Borrar") } },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancelar") } },
+        )
+    }
+}
+
+@Composable
+private fun NameDialog(onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
+    var name by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Nombre del preset") },
+        text = { OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true) },
+        confirmButton = { TextButton(onClick = { onConfirm(name) }, enabled = name.isNotBlank()) { Text("Guardar") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
+    )
 }
 
 @Composable

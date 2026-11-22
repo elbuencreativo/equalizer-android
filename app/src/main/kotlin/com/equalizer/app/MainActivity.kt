@@ -13,6 +13,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.core.content.ContextCompat
+import com.equalizer.app.core.CustomPresets
+import com.equalizer.app.core.customPresetsDataStore
 import com.equalizer.app.device.DeviceRegistry
 import com.equalizer.app.device.deviceDataStore
 import com.equalizer.app.engine.EqRuntime
@@ -38,11 +40,14 @@ class MainActivity : ComponentActivity() {
                 val vm = remember {
                     MainViewModel(
                         scope, EqRuntime.output, EqRuntime.engine.sessions, EqRuntime.engine.failed,
-                        DeviceRegistry(deviceDataStore), Settings(settingsDataStore),
+                        DeviceRegistry(deviceDataStore), Settings(settingsDataStore), CustomPresets(customPresetsDataStore),
                     ) { EqRuntime.detector?.refresh() }
                 }
                 val state by vm.uiState.collectAsState()
-                MainScreen(state, vm::onTogglePower, vm::onSelectPreset, vm::onAssignType, vm::onBandChanged)
+                MainScreen(
+                    state, vm::onTogglePower, vm::onSelectPreset, vm::onAssignType, vm::onBandChanged,
+                    onSaveCustom = vm::onSaveCustom, onApplyCustom = vm::onApplyCustom, onDeleteCustom = vm::onDeleteCustom,
+                )
             }
         }
     }

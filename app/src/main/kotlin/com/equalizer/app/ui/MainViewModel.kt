@@ -1,6 +1,9 @@
 package com.equalizer.app.ui
 
 import com.equalizer.app.core.ContentType
+import com.equalizer.app.core.CustomPreset
+import com.equalizer.app.core.CustomPresets
+import com.equalizer.app.core.EqCurve
 import com.equalizer.app.core.DeviceType
 import com.equalizer.app.core.Preset
 import com.equalizer.app.core.baseProfile
@@ -27,6 +30,7 @@ data class MainUiState(
     val bands: List<Float>,
     val apps: List<String>,
     val failedCount: Int,
+    val customPresets: List<CustomPreset> = emptyList(),
 )
 
 class MainViewModel(
@@ -36,6 +40,7 @@ class MainViewModel(
     failed: StateFlow<Set<Int>>,
     private val registry: DeviceRegistry,
     private val settings: Settings,
+    private val custom: CustomPresets,
     private val refreshOutput: () -> Unit,
 ) {
     val uiState: StateFlow<MainUiState> = combine(
@@ -51,6 +56,7 @@ class MainViewModel(
             failedCount = 0,
         )
     }.combine(failed) { s, f -> s.copy(failedCount = f.size) }
+        .combine(custom.all) { s, c -> s.copy(customPresets = c) }
         .stateIn(
             scope, SharingStarted.Eagerly,
             MainUiState(output.value, true, Preset.FLAT, recommendedFor(output.value.deviceType), List(10) { 0f }, emptyList(), 0),
@@ -82,5 +88,26 @@ class MainViewModel(
             offsets[index] = target - current
             settings.setOffsets(offsets)
         }
+    }
+
+    /** Guarda preset actual + ajustes manuales (sin el perfil base del dispositivo). */
+    fun onSaveCustom(name: String) {
+        scope.launch {
+            val preset = presetCurve(settings.preset.first()).gainsDb
+            val offsets = settings.offsets.first()
+            val gains = preset.mapIndexed { i, g -> (g + offsets[i]).coerceIn(-MAX_GAIN_DB, MAX_GAIN_DB) }
+            custom.save(CustomPreset(name, EqCurve(gains)))
+        }
+    }
+
+    fun onApplyCustom(p: CustomPreset) {
+        scope.launch {
+            settings.setPreset(Preset.FLAT)
+            settings.setOffsets(p.curve.gainsDb)
+        }
+    }
+
+    fun onDeleteCustom(name: String) {
+        scope.launch { custom.delete(name) }
     }
 }

@@ -2,6 +2,7 @@ package com.equalizer.app.ui
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.equalizer.app.core.ContentType
+import com.equalizer.app.core.CustomPresets
 import com.equalizer.app.core.DeviceType
 import com.equalizer.app.core.Preset
 import com.equalizer.app.core.recommendedFor
@@ -43,8 +44,9 @@ class MainViewModelTest {
         val output = MutableStateFlow(initial)
         val registry = DeviceRegistry(PreferenceDataStoreFactory.create { tmp.newFolder().resolve("d.preferences_pb") })
         val settings = Settings(PreferenceDataStoreFactory.create { tmp.newFolder().resolve("s.preferences_pb") })
+        val custom = CustomPresets(PreferenceDataStoreFactory.create { tmp.newFolder().resolve("c.preferences_pb") })
         val vm = MainViewModel(
-            scope, output, MutableStateFlow(emptyMap()), MutableStateFlow(emptySet()), registry, settings,
+            scope, output, MutableStateFlow(emptyMap()), MutableStateFlow(emptySet()), registry, settings, custom,
         ) {
             output.value = buildActive(candidate, runBlocking { registry.typeFor(candidate.key, candidate.displayName) }, false)
         }
@@ -96,5 +98,18 @@ class MainViewModelTest {
         f.vm.uiState.first { it.bands[0] == 5f }
         f.vm.onSelectPreset(Preset.FLAT)
         assertEquals(0f, f.vm.uiState.first { it.bands[0] == 0f }.bands[0], 0.001f)
+    }
+
+    @Test fun viewModel_saveCustom_thenApply_restoresBands() = runTest(UnconfinedTestDispatcher()) {
+        val f = fixture(backgroundScope, btOutput)
+        f.vm.onBandChanged(0, 5f)
+        f.vm.uiState.first { it.bands[0] == 5f }
+        f.vm.onSaveCustom("Mío")
+        f.vm.uiState.first { s -> s.customPresets.any { it.name == "Mío" } }
+        f.vm.onSelectPreset(Preset.PODCAST)
+        f.vm.uiState.first { it.preset == Preset.PODCAST && it.bands[0] == -12f }
+        f.vm.onApplyCustom(f.vm.uiState.value.customPresets.first { it.name == "Mío" })
+        val s = f.vm.uiState.first { it.preset == Preset.FLAT && it.bands[0] == 5f }
+        assertEquals(5f, s.bands[0], 0.001f)
     }
 }
