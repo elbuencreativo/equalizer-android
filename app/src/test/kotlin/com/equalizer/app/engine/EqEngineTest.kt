@@ -9,18 +9,26 @@ class EqEngineTest {
     private class FakeHandle : EffectHandle {
         var applied: Combined? = null
         var released = false
-        override fun apply(c: Combined) { applied = c }
-        override fun release() { released = true }
+        var throwOnApply = false
+        var throwOnRelease = false
+        override fun apply(c: Combined) {
+            if (throwOnApply) throw IllegalStateException("efecto perdido")
+            applied = c
+        }
+        override fun release() {
+            released = true
+            if (throwOnRelease) throw IllegalStateException("ya liberado")
+        }
     }
 
     private val curveA = Combined(List(10) { 1f }, -1f)
     private val curveB = Combined(List(10) { 2f }, -2f)
 
-    private fun engine(handles: MutableList<FakeHandle>, fail: Boolean = false) =
+    private fun engine(handles: MutableList<FakeHandle>, fail: Boolean = false, configure: (FakeHandle) -> Unit = {}) =
         EqEngine { _ ->
             if (fail) throw IllegalStateException("boom")
-            FakeHandle().also { handles.add(it) }
-        }
+            FakeHandle().also { configure(it); handles.add(it) }
+        }.also { it.setEnabled(true) }
 
     @Test fun sessionOpened_createsAndAppliesCurve() {
         val h = mutableListOf<FakeHandle>()
@@ -90,5 +98,50 @@ class EqEngineTest {
         e.onSessionOpened(7, "pkg")
         assertEquals(setOf(7), e.failed.value)
         assertEquals(mapOf(7 to "pkg"), e.sessions.value)
+    }
+
+    @Test fun defaultsToDisabled_createsNoHandleUntilEnabled() {
+        val h = mutableListOf<FakeHandle>()
+        val e = EqEngine { FakeHandle().also { x -> h.add(x) } }
+        e.onSessionOpened(1, "a")
+        assertEquals(0, h.size)
+        e.setEnabled(true)
+        assertEquals(1, h.size)
+    }
+
+    @Test fun setCurve_whenApplyThrows_dropsHandleAndMarksFailed() {
+        val h = mutableListOf<FakeHandle>()
+        val e = engine(h)
+        e.onSessionOpened(1, "a")
+        h[0].throwOnApply = true
+        e.setCurve(curveB)
+        assertTrue(h[0].released)
+        assertEquals(setOf(1), e.failed.value)
+    }
+
+    @Test fun applyThrowsOnCreate_releasesHandleAndMarksFailed() {
+        val h = mutableListOf<FakeHandle>()
+        val e = engine(h, configure = { it.throwOnApply = true })
+        e.onSessionOpened(1, "a")
+        assertTrue(h[0].released)
+        assertEquals(setOf(1), e.failed.value)
+    }
+
+    @Test fun releaseThrows_doesNotPropagate() {
+        val h = mutableListOf<FakeHandle>()
+        val e = engine(h, configure = { it.throwOnRelease = true })
+        e.onSessionOpened(1, "a")
+        e.onSessionClosed(1)
+        e.onSessionOpened(2, "b")
+        e.setEnabled(false)
+    }
+
+    @Test fun clearSessions_releasesAndEmpties() {
+        val h = mutableListOf<FakeHandle>()
+        val e = engine(h)
+        e.onSessionOpened(1, "a"); e.onSessionOpened(2, "b")
+        e.clearSessions()
+        assertTrue(h.all { it.released })
+        assertTrue(e.sessions.value.isEmpty())
     }
 }

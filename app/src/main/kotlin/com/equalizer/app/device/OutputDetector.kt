@@ -3,7 +3,11 @@ package com.equalizer.app.device
 import android.content.Context
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
+import android.media.AudioAttributes
 import android.media.AudioManager
+import android.media.AudioPlaybackConfiguration
+import android.os.Build
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +23,12 @@ class OutputDetector(
     private val _active = MutableStateFlow(ActiveOutput.NONE)
     val active: StateFlow<ActiveOutput> = _active
 
+    private val seq = AtomicInteger()
+
+    private val playbackCallback = object : AudioManager.AudioPlaybackCallback() {
+        override fun onPlaybackConfigChanged(configs: MutableList<AudioPlaybackConfiguration>?) = refresh()
+    }
+
     private val callback = object : AudioDeviceCallback() {
         override fun onAudioDevicesAdded(added: Array<out AudioDeviceInfo>) = refresh()
         override fun onAudioDevicesRemoved(removed: Array<out AudioDeviceInfo>) = refresh()
@@ -26,23 +36,36 @@ class OutputDetector(
 
     fun start() {
         audio.registerAudioDeviceCallback(callback, null)
+        audio.registerAudioPlaybackCallback(playbackCallback, null)
         refresh()
     }
 
-    fun stop() = audio.unregisterAudioDeviceCallback(callback)
+    fun stop() {
+        audio.unregisterAudioDeviceCallback(callback)
+        audio.unregisterAudioPlaybackCallback(playbackCallback)
+    }
 
     /** Reevalúa la salida activa; útil tras asignar un tipo. */
     fun refresh() {
+        val my = seq.incrementAndGet()
         val candidates = audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS).mapNotNull { toCandidate(it) }
-        val picked = pickActive(candidates)
+        val picked = pickActive(candidates, routedKeys())
         if (picked == null) {
             _active.value = ActiveOutput.NONE
             return
         }
         scope.launch {
             val assigned = registry.typeFor(picked.key, picked.displayName)
-            _active.value = buildActive(picked, assigned, isTablet)
+            // Solo la última evaluación gana: una más antigua no pisa a una nueva.
+            if (seq.get() == my) _active.value = buildActive(picked, assigned, isTablet)
         }
+    }
+
+    /** Salidas por donde Android enruta realmente el audio multimedia (API 33+). */
+    private fun routedKeys(): Set<String> {
+        if (Build.VERSION.SDK_INT < 33) return emptySet()
+        val attrs = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).build()
+        return audio.getAudioDevicesForAttributes(attrs).mapNotNull { toCandidate(it)?.key }.toSet()
     }
 
     private fun toCandidate(d: AudioDeviceInfo): OutputCandidate? {

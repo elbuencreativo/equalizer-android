@@ -44,4 +44,10 @@ class DownloadTest {
         assertTrue(r is DownloadResult.Failed)
         assertFalse(f.exists())
     }
+
+    @Test fun release_withoutSha256_isRejected() {
+        val r = checkReleaseVerifiable(ReleaseInfo("0.2.0", "https://x/a.apk", null))
+        assertTrue(r is InstallResult.Failed)
+        assertEquals(null, checkReleaseVerifiable(ReleaseInfo("0.2.0", "https://x/a.apk", hash)))
+    }
 }

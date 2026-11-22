@@ -115,6 +115,16 @@ fun MainScreen(
             }
         }
 
+        if (!state.dumpAvailable) {
+            Section("Falta un permiso") {
+                Text(
+                    "Sin el permiso DUMP no se detectan apps como Pocket Casts o Voice. Conecta el teléfono por USB y ejecuta:",
+                    color = Tokens.Warning,
+                )
+                Text("adb shell pm grant com.equalizer.app android.permission.DUMP", color = Tokens.TextPrimary)
+            }
+        }
+
         Section("Apps con audio") {
             if (state.apps.isEmpty()) {
                 Text("Ninguna app está reproduciendo audio.", color = Tokens.TextSecondary)

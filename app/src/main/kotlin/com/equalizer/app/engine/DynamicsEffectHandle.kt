@@ -14,11 +14,16 @@ class DynamicsEffectHandle(sessionId: Int) : EffectHandle {
             true, n, false, 0, false, 0, true,
         ).build()
         dp = DynamicsProcessing(0, sessionId, config)
-        val eq = DynamicsProcessing.Eq(true, true, n)
-        BAND_FREQS_HZ.forEachIndexed { i, f -> eq.setBand(i, DynamicsProcessing.EqBand(true, f.toFloat(), 0f)) }
-        dp.setPreEqAllChannelsTo(eq)
-        dp.setLimiterAllChannelsTo(DynamicsProcessing.Limiter(true, true, 0, 1f, 60f, 10f, -2f, 0f))
-        dp.enabled = true
+        try {
+            val eq = DynamicsProcessing.Eq(true, true, n)
+            BAND_FREQS_HZ.forEachIndexed { i, f -> eq.setBand(i, DynamicsProcessing.EqBand(true, f.toFloat(), 0f)) }
+            dp.setPreEqAllChannelsTo(eq)
+            dp.setLimiterAllChannelsTo(DynamicsProcessing.Limiter(true, true, 0, 1f, 60f, 10f, -2f, 0f))
+            dp.enabled = true
+        } catch (e: Exception) {
+            dp.release() // no dejar el efecto nativo vivo si falla la configuración
+            throw e
+        }
     }
 
     override fun apply(c: Combined) {

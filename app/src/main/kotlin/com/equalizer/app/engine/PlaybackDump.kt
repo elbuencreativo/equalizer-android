@@ -18,3 +18,14 @@ fun activeMediaSessions(dump: String, ownUid: Int): List<PlaybackSession> =
         .map { (g, _, _) -> PlaybackSession(g[1].toInt(), g[4].toInt()) }
         .distinct()
         .toList()
+
+private val ANY_SESSION = Regex("""u/pid:(\d+)/\d+ .*?sessionId:(\d+)""")
+
+/** Ids de sesión presentes en el volcado en cualquier estado (sonando, en pausa o inactivas). */
+fun presentSessionIds(dump: String, ownUid: Int): Set<Int> =
+    dump.lineSequence()
+        .mapNotNull { ANY_SESSION.find(it) }
+        .filter { it.groupValues[1].toInt() >= FIRST_APP_UID && it.groupValues[1].toInt() != ownUid }
+        .map { it.groupValues[2].toInt() }
+        .filter { it > 0 }
+        .toSet()

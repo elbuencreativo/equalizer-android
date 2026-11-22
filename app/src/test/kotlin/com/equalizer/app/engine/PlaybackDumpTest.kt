@@ -27,4 +27,13 @@ class PlaybackDumpTest {
     @Test fun garbageInput_returnsEmpty() {
         assertEquals(emptyList<PlaybackSession>(), activeMediaSessions("hola\n\nnada", ownUid = 1))
     }
+
+    @Test fun presentSessionIds_includesAnyStateButNotSessionZeroOrSystemUids() {
+        val dump = listOf(spotify, idle, soundPool, voice).joinToString("\n")
+        assertEquals(setOf(98529, 96705, 35265), presentSessionIds(dump, ownUid = 99999))
+    }
+
+    @Test fun presentSessionIds_excludesOwnUid() {
+        assertEquals(emptySet<Int>(), presentSessionIds(spotify, ownUid = 10335))
+    }
 }

@@ -38,19 +38,21 @@ class MainViewModelTest {
         val registry: DeviceRegistry,
         val settings: Settings,
         val vm: MainViewModel,
+        val dump: MutableStateFlow<Boolean>,
     )
 
     private fun fixture(scope: CoroutineScope, initial: ActiveOutput, candidate: OutputCandidate = bt): Fixture {
         val output = MutableStateFlow(initial)
         val registry = DeviceRegistry(PreferenceDataStoreFactory.create { tmp.newFolder().resolve("d.preferences_pb") })
         val settings = Settings(PreferenceDataStoreFactory.create { tmp.newFolder().resolve("s.preferences_pb") })
+        val dump = MutableStateFlow(true)
         val custom = CustomPresets(PreferenceDataStoreFactory.create { tmp.newFolder().resolve("c.preferences_pb") })
         val vm = MainViewModel(
-            scope, output, MutableStateFlow(emptyMap()), MutableStateFlow(emptySet()), registry, settings, custom,
+            scope, output, MutableStateFlow(emptyMap()), MutableStateFlow(emptySet()), dump, registry, settings, custom,
         ) {
             output.value = buildActive(candidate, runBlocking { registry.typeFor(candidate.key, candidate.displayName) }, false)
         }
-        return Fixture(output, registry, settings, vm)
+        return Fixture(output, registry, settings, vm, dump)
     }
 
     @Test fun viewModel_unassignedBluetooth_exposesUnassignedSource() = runTest(UnconfinedTestDispatcher()) {
@@ -111,5 +113,11 @@ class MainViewModelTest {
         f.vm.onApplyCustom(f.vm.uiState.value.customPresets.first { it.name == "Mío" })
         val s = f.vm.uiState.first { it.preset == Preset.FLAT && it.bands[0] == 5f }
         assertEquals(5f, s.bands[0], 0.001f)
+    }
+
+    @Test fun viewModel_dumpUnavailable_isExposedInState() = runTest(UnconfinedTestDispatcher()) {
+        val f = fixture(backgroundScope, btOutput)
+        f.dump.value = false
+        f.vm.uiState.first { !it.dumpAvailable }
     }
 }

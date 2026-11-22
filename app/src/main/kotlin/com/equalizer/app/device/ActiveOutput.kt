@@ -3,7 +3,7 @@ package com.equalizer.app.device
 import android.media.AudioDeviceInfo
 import com.equalizer.app.core.DeviceType
 
-enum class OutputKind { BUILT_IN_SPEAKER, WIRED, BLUETOOTH, UNKNOWN }
+enum class OutputKind { BUILT_IN_SPEAKER, WIRED, BLUETOOTH, EXTERNAL, UNKNOWN }
 
 enum class TypeSource { ASSIGNED, DETECTED, UNASSIGNED }
 
@@ -33,20 +33,31 @@ fun mapKind(androidDeviceType: Int): OutputKind = when (androidDeviceType) {
     AudioDeviceInfo.TYPE_BLE_SPEAKER,
     AudioDeviceInfo.TYPE_BLE_BROADCAST,
     AudioDeviceInfo.TYPE_HEARING_AID -> OutputKind.BLUETOOTH
+    AudioDeviceInfo.TYPE_USB_DEVICE,
+    AudioDeviceInfo.TYPE_USB_ACCESSORY,
+    AudioDeviceInfo.TYPE_HDMI,
+    AudioDeviceInfo.TYPE_HDMI_ARC,
+    AudioDeviceInfo.TYPE_HDMI_EARC,
+    AudioDeviceInfo.TYPE_DOCK -> OutputKind.EXTERNAL
     else -> OutputKind.UNKNOWN
 }
 
 fun defaultTypeFor(kind: OutputKind, isTablet: Boolean): DeviceType? = when (kind) {
     OutputKind.BUILT_IN_SPEAKER -> if (isTablet) DeviceType.TABLET_SPEAKER else DeviceType.PHONE_SPEAKER
     OutputKind.WIRED -> DeviceType.IN_EAR_WIRED
-    OutputKind.BLUETOOTH, OutputKind.UNKNOWN -> null
+    OutputKind.BLUETOOTH, OutputKind.EXTERNAL, OutputKind.UNKNOWN -> null
 }
 
-/** Bluetooth manda sobre cable y cable sobre parlante interno. */
-fun pickActive(candidates: List<OutputCandidate>): OutputCandidate? {
+/**
+ * Si Android informa por dónde se enruta el audio (`routedKeys`), manda esa salida.
+ * Si no, Bluetooth manda sobre cable/externo y estos sobre el parlante interno.
+ */
+fun pickActive(candidates: List<OutputCandidate>, routedKeys: Set<String> = emptySet()): OutputCandidate? {
+    val routed = candidates.filter { it.key in routedKeys }
+    if (routed.isNotEmpty()) return routed.first()
     fun rank(k: OutputKind) = when (k) {
         OutputKind.BLUETOOTH -> 3
-        OutputKind.WIRED -> 2
+        OutputKind.WIRED, OutputKind.EXTERNAL -> 2
         OutputKind.BUILT_IN_SPEAKER -> 1
         OutputKind.UNKNOWN -> 0
     }

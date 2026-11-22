@@ -15,6 +15,7 @@ import com.equalizer.app.core.effective
 import com.equalizer.app.device.DeviceRegistry
 import com.equalizer.app.device.OutputDetector
 import com.equalizer.app.device.deviceDataStore
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -23,7 +24,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 class EqService : Service() {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val scope = CoroutineScope(
+        SupervisorJob() + Dispatchers.Main +
+            CoroutineExceptionHandler { _, e -> android.util.Log.e("EqService", "coroutine failed", e) },
+    )
     private val receiver = SessionReceiver()
     private var discovery: SessionDiscovery? = null
 
@@ -43,7 +47,10 @@ class EqService : Service() {
         }
         ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_EXPORTED)
 
-        discovery = SessionDiscovery(this, EqRuntime.engine, scope).also { it.start() }
+        discovery = SessionDiscovery(this, EqRuntime.engine, scope).also { d ->
+            d.start()
+            scope.launch { d.dumpAvailable.collect { EqRuntime.dumpAvailable.value = it } }
+        }
 
         scope.launch {
             combine(detector.active, settings.preset, settings.offsets) { out, preset, offsets ->
@@ -62,6 +69,7 @@ class EqService : Service() {
         EqRuntime.detector?.stop()
         EqRuntime.detector = null
         EqRuntime.engine.setEnabled(false)
+        EqRuntime.engine.clearSessions()
         scope.cancel()
         super.onDestroy()
     }

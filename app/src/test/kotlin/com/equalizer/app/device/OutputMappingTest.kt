@@ -42,4 +42,25 @@ class OutputMappingTest {
         assertEquals(TypeSource.DETECTED, a.typeSource)
         assertEquals(DeviceType.PHONE_SPEAKER, a.deviceType)
     }
+
+    @Test fun mapKind_usbDevice_isExternal() {
+        assertEquals(OutputKind.EXTERNAL, mapKind(AudioDeviceInfo.TYPE_USB_DEVICE))
+        assertEquals(OutputKind.EXTERNAL, mapKind(AudioDeviceInfo.TYPE_HDMI))
+        assertEquals(OutputKind.EXTERNAL, mapKind(AudioDeviceInfo.TYPE_DOCK))
+    }
+
+    @Test fun defaultType_external_isNull() = assertNull(defaultTypeFor(OutputKind.EXTERNAL, false))
+
+    @Test fun pick_externalBeatsBuiltInSpeaker() {
+        val usb = OutputCandidate("usb", "USB-C", OutputKind.EXTERNAL)
+        val spk = OutputCandidate("builtin", "Teléfono", OutputKind.BUILT_IN_SPEAKER)
+        assertEquals(usb, pickActive(listOf(spk, usb)))
+    }
+
+    @Test fun pick_routedDeviceWinsOverRanking() {
+        val bt = OutputCandidate("bt", "Buds", OutputKind.BLUETOOTH)
+        val spk = OutputCandidate("builtin", "Teléfono", OutputKind.BUILT_IN_SPEAKER)
+        assertEquals(spk, pickActive(listOf(bt, spk), routedKeys = setOf("builtin")))
+        assertEquals(bt, pickActive(listOf(bt, spk), routedKeys = setOf("zzz")))
+    }
 }

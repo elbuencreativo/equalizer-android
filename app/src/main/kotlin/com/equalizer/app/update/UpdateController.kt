@@ -31,7 +31,7 @@ class UpdateController(
     fun check() {
         _state.value = UpdateState.Checking
         scope.launch {
-            val r = fetchLatest()
+            val r = try { fetchLatest() } catch (e: Exception) { null }
             _state.value = when {
                 r == null -> UpdateState.Failed("No se pudo consultar las actualizaciones")
                 isNewer(currentVersion, r.version) -> UpdateState.Available(r)
@@ -45,9 +45,14 @@ class UpdateController(
         val available = _state.value as? UpdateState.Available ?: return
         _state.value = UpdateState.Working
         scope.launch {
-            _state.value = when (val r = installer(available.release)) {
+            val result = try {
+                installer(available.release)
+            } catch (e: Exception) {
+                InstallResult.Failed("No se pudo iniciar la instalación: ${e.message ?: e.javaClass.simpleName}")
+            }
+            _state.value = when (result) {
                 InstallResult.Started -> UpdateState.Idle
-                is InstallResult.Failed -> UpdateState.Failed(r.reason)
+                is InstallResult.Failed -> UpdateState.Failed(result.reason)
             }
         }
     }

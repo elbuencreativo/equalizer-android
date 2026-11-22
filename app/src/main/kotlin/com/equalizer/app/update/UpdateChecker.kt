@@ -22,11 +22,26 @@ class UpdateChecker(private val http: HttpGet, private val owner: String, privat
             try {
                 val res = http.get("https://api.github.com/repos/$owner/$repo/releases/latest")
                 if (res.code != 200) return@withContext null
-                parse(res.body)
+                val info = parse(res.body) ?: return@withContext null
+                if (info.sha256 != null) info else info.copy(sha256 = fetchSiblingSha(res.body, info.apkUrl))
             } catch (e: Exception) {
                 null
             }
         }
+    }
+
+    /** Busca un asset `<apk>.sha256` junto al APK y lee su primer token. */
+    private fun fetchSiblingSha(body: String, apkUrl: String): String? {
+        val assets = JSONObject(body).optJSONArray("assets") ?: return null
+        for (i in 0 until assets.length()) {
+            val a = assets.getJSONObject(i)
+            if (a.optString("name").endsWith(".apk.sha256")) {
+                val res = http.get(a.getString("browser_download_url"))
+                if (res.code != 200) return null
+                return res.body.trim().split(Regex("\\s+")).firstOrNull()?.lowercase()?.takeIf { it.isNotEmpty() }
+            }
+        }
+        return null
     }
 
     private fun parse(body: String): ReleaseInfo? {

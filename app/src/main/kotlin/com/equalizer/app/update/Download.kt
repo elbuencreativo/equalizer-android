@@ -37,3 +37,7 @@ fun downloadVerified(open: () -> InputStream, target: File, expectedSha256: Stri
         DownloadResult.Failed("Descarga interrumpida: ${e.message ?: e.javaClass.simpleName}")
     }
 }
+
+/** Una release sin sha256 no se puede verificar: no se instala. */
+fun checkReleaseVerifiable(r: ReleaseInfo): InstallResult.Failed? =
+    if (r.sha256.isNullOrBlank()) InstallResult.Failed("La release no incluye sha256; no se puede verificar el APK") else null

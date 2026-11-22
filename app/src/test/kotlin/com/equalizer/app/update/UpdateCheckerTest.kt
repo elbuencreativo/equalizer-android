@@ -34,4 +34,17 @@ class UpdateCheckerTest {
     @Test fun latest_blankRepo_returnsNull() = runTest {
         assertNull(UpdateChecker({ HttpResult(200, json) }, "", "").latest())
     }
+
+    @Test fun latest_fetchesSha256FromSiblingAsset() = runTest {
+        val body = """
+            {"tag_name":"v0.3.0","assets":[
+              {"name":"equalizer-0.3.0.apk","browser_download_url":"https://x/a.apk"},
+              {"name":"equalizer-0.3.0.apk.sha256","browser_download_url":"https://x/a.apk.sha256"}
+            ]}
+        """.trimIndent()
+        val http = HttpGet { url ->
+            if (url.endsWith(".sha256")) HttpResult(200, "ABC123  equalizer-0.3.0.apk\n") else HttpResult(200, body)
+        }
+        assertEquals(ReleaseInfo("0.3.0", "https://x/a.apk", "abc123"), UpdateChecker(http, "o", "r").latest())
+    }
 }

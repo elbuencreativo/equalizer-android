@@ -37,4 +37,18 @@ class UpdateControllerTest {
         c.install()
         assertEquals(UpdateState.Failed("hash distinto"), c.state.first { it is UpdateState.Failed })
     }
+
+    @Test fun install_throwing_isReportedAsFailed() = runTest(UnconfinedTestDispatcher()) {
+        val c = UpdateController(backgroundScope, "0.1.0", { release }, { throw IllegalStateException("sin instalador") })
+        c.check()
+        c.state.first { it is UpdateState.Available }
+        c.install()
+        assertTrue(c.state.first { it is UpdateState.Failed } is UpdateState.Failed)
+    }
+
+    @Test fun check_throwing_isReportedAsFailed() = runTest(UnconfinedTestDispatcher()) {
+        val c = UpdateController(backgroundScope, "0.1.0", { throw java.io.IOException("sin red") }, { InstallResult.Started })
+        c.check()
+        assertTrue(c.state.first { it is UpdateState.Failed } is UpdateState.Failed)
+    }
 }

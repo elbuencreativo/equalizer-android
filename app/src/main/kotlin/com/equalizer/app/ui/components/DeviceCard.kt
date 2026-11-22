@@ -30,6 +30,7 @@ fun kindLabel(k: OutputKind) = when (k) {
     OutputKind.BUILT_IN_SPEAKER -> "Parlante integrado"
     OutputKind.WIRED -> "Cable"
     OutputKind.BLUETOOTH -> "Bluetooth"
+    OutputKind.EXTERNAL -> "USB / externo"
     OutputKind.UNKNOWN -> "Sin salida"
 }
 

@@ -31,6 +31,7 @@ data class MainUiState(
     val apps: List<String>,
     val failedCount: Int,
     val customPresets: List<CustomPreset> = emptyList(),
+    val dumpAvailable: Boolean = true,
 )
 
 class MainViewModel(
@@ -38,6 +39,7 @@ class MainViewModel(
     private val output: StateFlow<ActiveOutput>,
     sessions: StateFlow<Map<Int, String>>,
     failed: StateFlow<Set<Int>>,
+    dumpAvailable: StateFlow<Boolean>,
     private val registry: DeviceRegistry,
     private val settings: Settings,
     private val custom: CustomPresets,
@@ -57,6 +59,7 @@ class MainViewModel(
         )
     }.combine(failed) { s, f -> s.copy(failedCount = f.size) }
         .combine(custom.all) { s, c -> s.copy(customPresets = c) }
+        .combine(dumpAvailable) { s, d -> s.copy(dumpAvailable = d) }
         .stateIn(
             scope, SharingStarted.Eagerly,
             MainUiState(output.value, true, Preset.FLAT, recommendedFor(output.value.deviceType), List(10) { 0f }, emptyList(), 0),

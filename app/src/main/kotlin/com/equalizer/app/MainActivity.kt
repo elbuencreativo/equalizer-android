@@ -44,7 +44,7 @@ class MainActivity : ComponentActivity() {
                 val scope = rememberCoroutineScope()
                 val vm = remember {
                     MainViewModel(
-                        scope, EqRuntime.output, EqRuntime.engine.sessions, EqRuntime.engine.failed,
+                        scope, EqRuntime.output, EqRuntime.engine.sessions, EqRuntime.engine.failed, EqRuntime.dumpAvailable,
                         DeviceRegistry(deviceDataStore), Settings(settingsDataStore), CustomPresets(customPresetsDataStore),
                     ) { EqRuntime.detector?.refresh() }
                 }

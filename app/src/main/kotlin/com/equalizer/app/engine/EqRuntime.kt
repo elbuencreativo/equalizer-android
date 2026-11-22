@@ -11,5 +11,8 @@ object EqRuntime {
     /** Salida activa, reenviada por el servicio para la UI. */
     val output = MutableStateFlow(ActiveOutput.NONE)
 
+    /** Falso si falta el permiso DUMP y no se pueden descubrir sesiones. */
+    val dumpAvailable = MutableStateFlow(true)
+
     @Volatile var detector: OutputDetector? = null
 }
