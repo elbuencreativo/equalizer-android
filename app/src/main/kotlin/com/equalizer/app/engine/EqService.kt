@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 class EqService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val receiver = SessionReceiver()
+    private var discovery: SessionDiscovery? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -44,6 +45,8 @@ class EqService : Service() {
         }
         ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_EXPORTED)
 
+        discovery = SessionDiscovery(this, EqRuntime.engine, scope).also { it.start() }
+
         scope.launch {
             combine(detector.active, settings.preset) { out, preset ->
                 combineCurves(baseProfile(out.deviceType), presetCurve(preset))
@@ -55,6 +58,7 @@ class EqService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int) = START_STICKY
 
     override fun onDestroy() {
+        discovery?.stop()
         unregisterReceiver(receiver)
         EqRuntime.detector?.stop()
         EqRuntime.detector = null
