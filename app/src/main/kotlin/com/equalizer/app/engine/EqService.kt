@@ -81,7 +81,7 @@ class EqService : Service() {
         nm.createNotificationChannel(NotificationChannel("eq", "Ecualizador", NotificationManager.IMPORTANCE_LOW))
         val n = Notification.Builder(this, "eq")
             .setContentTitle("Equalizer activo")
-            .setSmallIcon(android.R.drawable.ic_lock_silent_mode_off)
+            .setSmallIcon(com.equalizer.app.R.drawable.ic_notification)
             .build()
         if (Build.VERSION.SDK_INT >= 29) {
             startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
