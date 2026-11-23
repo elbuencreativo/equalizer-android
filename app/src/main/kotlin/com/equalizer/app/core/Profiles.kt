@@ -27,4 +27,6 @@ fun presetCurve(preset: Preset): EqCurve = when (preset) {
     Preset.JAZZ_CLASSICAL -> c(0f, 0f, 0f, 0f, 0f, 0f, 0f, 1f, 1f, 2f)
     Preset.LOUDNESS -> c(5f, 4f, 2f, 0f, 0f, 0f, 0f, 1f, 3f, 4f)
     Preset.NIGHT -> c(-2f, -2f, -1f, 0f, 0f, 1f, 1f, 0f, -2f, -3f)
+    Preset.MOVIE -> c(3f, 4f, 3f, 0f, -1f, 1f, 2f, 2f, 1f, 1f) // graves de cine y diálogo claro
+    Preset.ANIME -> c(1f, 2f, 1f, 0f, 0f, 2f, 3f, 3f, 3f, 2f) // voces y brillo
 }

@@ -11,4 +11,6 @@ enum class Preset(val displayName: String) {
     JAZZ_CLASSICAL("Jazz / Clásica"),
     LOUDNESS("Loudness"),
     NIGHT("Noche"),
+    MOVIE("Películas"),
+    ANIME("Anime"),
 }
