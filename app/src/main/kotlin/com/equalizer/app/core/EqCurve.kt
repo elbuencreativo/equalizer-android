@@ -14,10 +14,16 @@ data class EqCurve(val gainsDb: List<Float>) {
     }
 }
 
+/**
+ * Fracción del pico positivo que se resta como preamp. El resto lo contiene el limitador del efecto,
+ * así el volumen máximo baja menos que con el pico completo.
+ */
+const val PREAMP_FRACTION = 0.5f
+
 data class Combined(val bands: List<Float>, val preampDb: Float, val balance: Float = 0f)
 
 fun combine(base: EqCurve, preset: EqCurve): Combined {
     val bands = base.gainsDb.zip(preset.gainsDb) { b, p -> (b + p).coerceIn(-MAX_GAIN_DB, MAX_GAIN_DB) }
-    val preamp = -(bands.maxOrNull() ?: 0f).coerceAtLeast(0f)
+    val preamp = -(bands.maxOrNull() ?: 0f).coerceAtLeast(0f) * PREAMP_FRACTION
     return Combined(bands, preamp)
 }

@@ -18,9 +18,9 @@ class EqCurveTest {
         assertEquals(12f, c.bands[0], 0.001f)
     }
 
-    @Test fun combine_preampIsMinusHighestPositive() {
+    @Test fun combine_preampIsHalfOfHighestPositive_limiterCatchesTheRest() {
         val c = combine(curve(2f, 1f), curve(4f, 0f))
-        assertEquals(-6f, c.preampDb, 0.001f)
+        assertEquals(-3f, c.preampDb, 0.001f)
     }
 
     @Test fun combine_allNegative_preampIsZero() {
