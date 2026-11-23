@@ -3,10 +3,6 @@ package com.equalizer.app
 import android.Manifest
 import android.content.Intent
 import android.os.Bundle
-import android.provider.Settings
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.stateIn
-import com.equalizer.app.ui.mergeNowPlaying
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -50,21 +46,11 @@ class MainActivity : ComponentActivity() {
                     launcher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS, Manifest.permission.BLUETOOTH_CONNECT))
                 }
                 val scope = rememberCoroutineScope()
-                val nowPlaying = remember {
-                    kotlinx.coroutines.flow.combine(EqRuntime.playing, EqRuntime.tracks) { playing, tracks ->
-                        mergeNowPlaying(playing, tracks) { pkg ->
-                            try {
-                                packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString()
-                            } catch (e: Exception) { pkg }
-                        }
-                    }.stateIn(scope, SharingStarted.Eagerly, emptyList())
-                }
                 val vm = remember {
                     MainViewModel(
                         scope, EqRuntime.output, EqRuntime.engine.sessions, EqRuntime.engine.failed, EqRuntime.dumpAvailable,
                         DeviceRegistry(deviceDataStore), EqSettings(settingsDataStore), CustomPresets(customPresetsDataStore),
                         EqRuntime.engine.status,
-                        nowPlaying,
                     ) { EqRuntime.detector?.refresh() }
                 }
                 val updater = remember {
@@ -77,15 +63,6 @@ class MainActivity : ComponentActivity() {
                 }
                 val updateState by updater.state.collectAsState()
                 val state by vm.uiState.collectAsState()
-                var trackAccess by remember { mutableStateOf(hasTrackAccess()) }
-                val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
-                androidx.compose.runtime.DisposableEffect(lifecycle) {
-                    val obs = androidx.lifecycle.LifecycleEventObserver { _, e ->
-                        if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) trackAccess = hasTrackAccess()
-                    }
-                    lifecycle.addObserver(obs)
-                    onDispose { lifecycle.removeObserver(obs) }
-                }
                 val settings = remember { EqSettings(settingsDataStore) }
                 val onboardingDone by settings.onboardingDone.collectAsState(initial = null)
                 var showGuide by remember { mutableStateOf(false) }
@@ -101,14 +78,9 @@ class MainActivity : ComponentActivity() {
                     state, vm::onTogglePower, vm::onSelectPreset, vm::onAssignType, vm::onBandChanged,
                     onSaveCustom = vm::onSaveCustom, onApplyCustom = vm::onApplyCustom, onDeleteCustom = vm::onDeleteCustom, onSelectMethod = vm::onSelectMethod, onShowGuide = { showGuide = true },
                     onBalanceChanged = vm::onBalanceChanged,
-                    trackAccess = trackAccess,
-                    onEnableTrackAccess = { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
                     footer = { UpdateSection(updater.currentVersion, updateState, updater::check, updater::install) },
                 )
             }
         }
     }
-
-    private fun hasTrackAccess() =
-        androidx.core.app.NotificationManagerCompat.getEnabledListenerPackages(this).contains(packageName)
 }

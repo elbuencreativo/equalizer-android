@@ -15,7 +15,6 @@ Resultados en el A57: `docs/superpowers/results/2026-prototype-matrix.md`
 3. Abre Equalizer y acepta los permisos de notificaciones y Bluetooth.
 
 Funciona en Android 9 o superior. El método «Global» (el predeterminado) no necesita más permisos.
-Para ver qué canción suena en la tarjeta «Ahora suena», la app te lleva a darle acceso a notificaciones (solo lee las sesiones de medios).
 Sin ADB, el modo «Por app» no descubre apps que no avisan su sesión; por eso se recomienda «Global».
 Hay tres métodos (Configuración): «Global» (predeterminado, 10 bandas y balance), «Clásico» (ecualizador antiguo de Android, para teléfonos viejos que rechazan «Global»; menos bandas y sin balance) y «Por app».
 Si un método falla, la app pasa sola al siguiente (Global → Clásico → Por app) y lo explica en pantalla.

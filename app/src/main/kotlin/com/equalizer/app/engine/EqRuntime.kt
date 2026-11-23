@@ -14,11 +14,5 @@ object EqRuntime {
     /** Falso si falta el permiso DUMP y no se pueden descubrir sesiones. */
     val dumpAvailable = MutableStateFlow(true)
 
-    /** Paquetes de las apps que suenan ahora (de `dumpsys audio`). */
-    val playing = MutableStateFlow<List<String>>(emptyList())
-
-    /** Pista que suena por paquete; vacío si el usuario no dio acceso a notificaciones. */
-    val tracks = MutableStateFlow<Map<String, Track>>(emptyMap())
-
     @Volatile var detector: OutputDetector? = null
 }

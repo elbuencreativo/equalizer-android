@@ -50,7 +50,6 @@ import com.equalizer.app.core.balanceLabel
 import com.equalizer.app.engine.EqMethod
 import com.equalizer.app.ui.components.BandSlider
 import com.equalizer.app.ui.components.DeviceCard
-import com.equalizer.app.ui.components.NowPlayingCard
 import com.equalizer.app.ui.components.PowerButton
 import com.equalizer.app.ui.theme.Tokens
 
@@ -67,8 +66,6 @@ fun MainScreen(
     onSelectMethod: (EqMethod) -> Unit = {},
     onShowGuide: () -> Unit = {},
     onBalanceChanged: (Float) -> Unit = {},
-    trackAccess: Boolean = true,
-    onEnableTrackAccess: () -> Unit = {},
     footer: @Composable () -> Unit = {},
 ) {
     var saving by remember { mutableStateOf(false) }
@@ -99,7 +96,7 @@ fun MainScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             if (tab == 0) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         PowerButton(state.enabled, onTogglePower, size = 96.dp)
                         Text(
@@ -109,7 +106,6 @@ fun MainScreen(
                             modifier = Modifier.padding(top = 4.dp),
                         )
                     }
-                    NowPlayingCard(state.nowPlaying, trackAccess, onEnableTrackAccess, Modifier.weight(1f))
                 }
                 if (state.fellBack) {
                     Text(

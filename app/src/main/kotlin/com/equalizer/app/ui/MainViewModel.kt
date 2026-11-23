@@ -44,7 +44,6 @@ data class MainUiState(
     val fellBack: Boolean = false,
     /** Hay una app sonando sin sesión propia (p. ej. un navegador). */
     val sessionlessApp: Boolean = false,
-    val nowPlaying: List<NowPlayingItem> = emptyList(),
     val balance: Float = 0f,
 )
 
@@ -58,7 +57,6 @@ class MainViewModel(
     private val settings: Settings,
     private val custom: CustomPresets,
     engineStatus: StateFlow<EngineStatus> = MutableStateFlow(EngineStatus(EqMethod.GLOBAL, false)),
-    nowPlaying: StateFlow<List<NowPlayingItem>> = MutableStateFlow(emptyList()),
     private val refreshOutput: () -> Unit,
 ) {
     val uiState: StateFlow<MainUiState> = combine(
@@ -79,7 +77,6 @@ class MainViewModel(
         .combine(dumpAvailable) { s, d -> s.copy(dumpAvailable = d) }
         .combine(settings.method) { s, m -> s.copy(method = m) }
         .combine(settings.balance) { s, b -> s.copy(balance = b) }
-        .combine(nowPlaying) { s, n -> s.copy(nowPlaying = n) }
         .combine(engineStatus) { s, e -> s.copy(activeMethod = e.active, fellBack = e.fellBack) }
         .stateIn(
             scope, SharingStarted.Eagerly,

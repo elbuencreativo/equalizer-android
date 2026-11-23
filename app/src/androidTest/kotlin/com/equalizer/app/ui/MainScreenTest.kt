@@ -17,7 +17,7 @@ import org.junit.Test
 class MainScreenTest {
     @get:Rule val rule = createComposeRule()
 
-    @Test fun showsDeviceNowPlayingPowerButtonAndSettings() {
+    @Test fun showsDevicePowerButtonAndSettings() {
         val state = MainUiState(
             output = ActiveOutput("bt", "Buds X", OutputKind.BLUETOOTH, DeviceType.BUDS, TypeSource.ASSIGNED),
             enabled = true,
@@ -32,7 +32,6 @@ class MainScreenTest {
         }
         rule.onNodeWithText("Buds X", substring = true).assertExists()
         rule.onNodeWithContentDescription("Encender o apagar").assertExists()
-        rule.onNodeWithText("Ahora suena").assertExists()
         rule.onNodeWithText("Configuración").performClick()
         rule.onNodeWithText("Método de ecualización").assertExists()
     }

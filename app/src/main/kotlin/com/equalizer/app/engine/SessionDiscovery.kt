@@ -31,8 +31,6 @@ class SessionDiscovery(
     private val lock = Mutex()
     private val _dumpAvailable = MutableStateFlow(true)
     val dumpAvailable: StateFlow<Boolean> = _dumpAvailable
-    private val _playing = MutableStateFlow<List<String>>(emptyList())
-    val playing: StateFlow<List<String>> = _playing
 
     private val callback = object : AudioManager.AudioPlaybackCallback() {
         override fun onPlaybackConfigChanged(configs: MutableList<AudioPlaybackConfiguration>?) = refresh()
@@ -49,13 +47,10 @@ class SessionDiscovery(
         scope.launch(Dispatchers.IO) {
             lock.withLock {
                 val dump = readDump()
-                if (dump == null) { _dumpAvailable.value = false; _playing.value = emptyList(); return@withLock }
+                if (dump == null) { _dumpAvailable.value = false; return@withLock }
                 _dumpAvailable.value = true
                 val uid = android.os.Process.myUid()
                 val started = activeMediaSessions(dump, uid)
-                _playing.value = started
-                    .mapNotNull { context.packageManager.getPackagesForUid(it.uid)?.firstOrNull() }
-                    .distinct()
                 val plan = reconciler.reconcile(
                     known = engine.sessions.value.keys,
                     started = started.map { it.sessionId }.toSet(),
