@@ -20,7 +20,9 @@ import androidx.core.content.ContextCompat
 import com.equalizer.app.core.CustomPresets
 import com.equalizer.app.core.customPresetsDataStore
 import com.equalizer.app.device.DeviceRegistry
+import com.equalizer.app.device.OutputDetector
 import com.equalizer.app.device.deviceDataStore
+import androidx.lifecycle.lifecycleScope
 import com.equalizer.app.engine.EqRuntime
 import com.equalizer.app.engine.EqService
 import com.equalizer.app.engine.Settings as EqSettings
@@ -35,12 +37,43 @@ import com.equalizer.app.ui.MainViewModel
 import com.equalizer.app.ui.theme.EqTheme
 
 class MainActivity : ComponentActivity() {
+    /** Detector de la pantalla mientras el servicio no corre (ecualizador apagado). */
+    private var uiDetector: OutputDetector? = null
+    private var uiDetectorJob: kotlinx.coroutines.Job? = null
+
+    override fun onStart() {
+        super.onStart()
+        if (uiDetector != null) return
+        val d = OutputDetector(this, DeviceRegistry(deviceDataStore), lifecycleScope)
+        uiDetector = d
+        d.start()
+        uiDetectorJob = lifecycleScope.launch {
+            d.active.collect { if (EqRuntime.detector == null) EqRuntime.output.value = it }
+        }
+    }
+
+    override fun onStop() {
+        uiDetectorJob?.cancel()
+        uiDetector?.stop()
+        uiDetector = null
+        super.onStop()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             EqTheme {
+                val settings = remember { EqSettings(settingsDataStore) }
+                var permsAnswered by remember { mutableStateOf(false) }
                 val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-                    ContextCompat.startForegroundService(this, Intent(this, EqService::class.java))
+                    permsAnswered = true
+                }
+                // El servicio solo vive mientras el ecualizador está encendido.
+                LaunchedEffect(permsAnswered) {
+                    if (!permsAnswered) return@LaunchedEffect
+                    settings.enabled.collect {
+                        if (it) ContextCompat.startForegroundService(this@MainActivity, Intent(this@MainActivity, EqService::class.java))
+                    }
                 }
                 LaunchedEffect(Unit) {
                     launcher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS, Manifest.permission.BLUETOOTH_CONNECT))
@@ -51,7 +84,7 @@ class MainActivity : ComponentActivity() {
                         scope, EqRuntime.output, EqRuntime.engine.sessions, EqRuntime.engine.failed, EqRuntime.dumpAvailable,
                         DeviceRegistry(deviceDataStore), EqSettings(settingsDataStore), CustomPresets(customPresetsDataStore),
                         EqRuntime.engine.status,
-                    ) { EqRuntime.detector?.refresh() }
+                    ) { (EqRuntime.detector ?: uiDetector)?.refresh() }
                 }
                 val updater = remember {
                     val installer = Installer(applicationContext)
@@ -63,7 +96,6 @@ class MainActivity : ComponentActivity() {
                 }
                 val updateState by updater.state.collectAsState()
                 val state by vm.uiState.collectAsState()
-                val settings = remember { EqSettings(settingsDataStore) }
                 val onboardingDone by settings.onboardingDone.collectAsState(initial = null)
                 var showGuide by remember { mutableStateOf(false) }
                 if (onboardingDone == null) return@EqTheme

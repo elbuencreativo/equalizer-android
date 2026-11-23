@@ -59,7 +59,13 @@ class EqService : Service() {
         }
         scope.launch { detector.active.collect { EqRuntime.output.value = it } }
         scope.launch { settings.method.collect { EqRuntime.engine.setMethod(it) } }
-        scope.launch { settings.enabled.collect { EqRuntime.engine.setEnabled(it) } }
+        scope.launch {
+            settings.enabled.collect {
+                EqRuntime.engine.setEnabled(it)
+                // Apagado = sin servicio ni notificación; la app lo vuelve a iniciar al encender.
+                if (!it) stopSelf()
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int) = START_STICKY
